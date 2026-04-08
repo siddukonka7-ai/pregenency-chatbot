@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CareNest - Pregnancy Assistant</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+   
+  </head>
+  <body class="main-page">
+    <div class="bg-shape shape1"></div>
+    <div class="bg-shape shape2"></div>
+    <div class="bg-shape shape3"></div>
+    <img
+      src="{{ url_for('static', filename='nag.jpeg') }}"
+      class="bg-logo"
+      alt="CareNest Logo"
+    />
+
+  <div class="switch-wrapper">
+  <span class="text-light">Light</span>
+
+  <div class="switch" onclick="toggleDark()">
+    <div class="knob"></div>
+  </div>
+
+  <span class="text-dark">Dark</span>
+</div>
+
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="brand-left">
+          <img
+            src="{{ url_for('static', filename='nag.jpeg') }}"
+            class="logo-small"
+            alt="Logo"
+          />
+          <div>
+            <h2>CareNest</h2>
+            <p>Your care companion</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <span class="welcome-text">Hi, {{ username }}</span>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section class="left-panel">
+        <div class="card glass fade-up">
+          <h3>Quick Help</h3>
+          <div class="button-grid">
+            <button
+              class="topic-btn"
+              onclick="quickMessage('What food should I eat during pregnancy?')"
+            >
+              Food
+            </button>
+            <button
+              class="topic-btn"
+              onclick="quickMessage('What exercise is safe during pregnancy?')"
+            >
+              Exercise
+            </button>
+            <button
+              class="topic-btn"
+              onclick="
+                quickMessage('How much rest is needed during pregnancy?')
+              "
+            >
+              Rest
+            </button>
+            <button
+              class="topic-btn"
+              onclick="
+                quickMessage('What precautions should I take during pregnancy?')
+              "
+            >
+              Precautions
+            </button>
+            <button
+              class="topic-btn"
+              onclick="quickMessage('How should I care for a newborn baby?')"
+            >
+              Baby Care
+            </button>
+            <button
+              class="topic-btn"
+              onclick="quickMessage('I am in first trimester')"
+            >
+              1st Trimester
+            </button>
+            <button
+              class="topic-btn"
+              onclick="quickMessage('I am in second trimester')"
+            >
+              2nd Trimester
+            </button>
+            <button
+              class="topic-btn"
+              onclick="quickMessage('I am in third trimester')"
+            >
+              3rd Trimester
+            </button>
+          </div>
+        </div>
+
+        <div class="card glass fade-up delay-1">
+          <h3>Emergency & Maps</h3>
+          <div class="button-grid">
+            <button class="sos-btn" onclick="sendSOS()">SOS Chat</button>
+            <button class="map-btn" onclick="sendSMS()">SMS Guardian</button>
+            <button class="topic-btn" onclick="callGuardian()">
+              Call Guardian
+            </button>
+            <button class="topic-btn" onclick="openWhatsApp()">WhatsApp</button>
+            <button class="map-btn full-width" onclick="openHospitalMap()">
+              Nearby Hospitals
+            </button>
+          </div>
+          <p class="small-note">
+            Guardian: {{ guardian_name }}<br />
+            Number: {{ guardian_mobile }}
+          </p>
+        </div>
+      </section>
+
+      <section class="chat-panel">
+        <div class="chat-card glass fade-up delay-2">
+          <div class="chat-header">
+            <div>
+              <h3>CareNest Assistant</h3>
+              <p class="chat-subtitle">Always here for support</p>
+            </div>
+            <span class="status-badge">Online</span>
+          </div>
+
+          <div id="chat-box"></div>
+
+          <div class="input-area glass-inner">
+            <input
+              type="text"
+              id="message"
+              placeholder="Type your question..."
+              onkeypress="handleKey(event)"
+            />
+            <button onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="sosModal" class="modal hidden">
+      <div class="modal-content glass pop-in">
+        <h3>Emergency Alert</h3>
+        <p>
+          If symptoms are serious, contact your guardian and go to the nearest
+          hospital immediately.
+        </p>
+        <div class="modal-buttons">
+          <button class="map-btn" onclick="sendSMS()">SMS</button>
+          <button class="topic-btn" onclick="callGuardian()">Call</button>
+          <button class="topic-btn" onclick="openWhatsApp()">WhatsApp</button>
+          <button class="sos-btn" onclick="openHospitalMap()">Hospitals</button>
+          <button class="secondary-btn" onclick="closeSOS()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const guardianNumber = "{{ guardian_mobile }}";
+
+      function appendMessage(sender, text, className) {
+        const chatBox = document.getElementById("chat-box");
+        const div = document.createElement("div");
+        div.className = "message " + className + " chat-animate";
+        div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      async function loadHistory() {
+        try {
+          const response = await fetch("/history");
+          if (!response.ok) return;
+
+          const chats = await response.json();
+          const chatBox = document.getElementById("chat-box");
+          chatBox.innerHTML = "";
+
+          chats.forEach((chat) => {
+            appendMessage("You", chat.user, "user");
+            appendMessage("Bot", chat.bot, "bot");
+          });
+        } catch (error) {
+          console.error("History error:", error);
+        }
+      }
+
+      async function sendMessage(customText = null) {
+        const input = document.getElementById("message");
+        const message = customText || input.value.trim();
+
+        if (!message) return;
+
+        appendMessage("You", message, "user");
+
+        if (!customText) {
+          input.value = "";
+        }
+
+        try {
+          const response = await fetch("/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ message: message }),
+          });
+
+          const data = await response.json();
+          appendMessage("Bot", data.response, "bot");
+        } catch (error) {
+          appendMessage("Bot", "Error: bot is not responding.", "bot");
+        }
+      }
+
+      function quickMessage(text) {
+        sendMessage(text);
+      }
+
+      function handleKey(event) {
+        if (event.key === "Enter") {
+          sendMessage();
+        }
+      }
+
+      function sendSOS() {
+        document.getElementById("sosModal").classList.remove("hidden");
+        sendMessage("I have bleeding and pain");
+      }
+
+      function closeSOS() {
+        document.getElementById("sosModal").classList.add("hidden");
+      }
+
+      function sendSMS() {
+        const message =
+          "Emergency! I may need urgent pregnancy-related help. Please contact me immediately.";
+        window.location.href = `sms:${guardianNumber}?body=${encodeURIComponent(message)}`;
+      }
+
+      function callGuardian() {
+        window.location.href = `tel:${guardianNumber}`;
+      }
+
+      function openWhatsApp() {
+        const number = guardianNumber.replace("+", "");
+        const message =
+          "Emergency! I may need urgent pregnancy-related help. Please contact me immediately.";
+        window.open(
+          `https://wa.me/${number}?text=${encodeURIComponent(message)}`,
+          "_blank",
+        );
+      }
+
+      function openHospitalMap() {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            function (position) {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              const mapsUrl = `https://www.google.com/maps/search/hospitals/@${lat},${lng},15z`;
+              window.open(mapsUrl, "_blank");
+            },
+            function () {
+              window.open(
+                "https://www.google.com/maps/search/nearby+hospitals",
+                "_blank",
+              );
+            },
+          );
+        } else {
+          window.open(
+            "https://www.google.com/maps/search/nearby+hospitals",
+            "_blank",
+          );
+        }
+      }
+
+      loadHistory();
+      
+      
+    </script>
+   <script>
+function toggleDark() {
+  document.body.classList.toggle("dark-mode");
+}
+</script>
+  </body>
+</html>
